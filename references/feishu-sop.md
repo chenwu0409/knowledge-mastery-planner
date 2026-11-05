@@ -25,10 +25,10 @@
 |---|---|
 | target → 知识点库「验收标准」 | 上游写 `scope_key, target_level, acceptance, evidence_refs, confidence, missing`。一个区块内以考试或范围版本标识分别保存仍需保留的目标。范围或目标改变的事实另记「考试范围确认依据」。 |
 | mastery → 知识点库「掌握状态变更历史」 | 上游写已验证 L 或未知、稳定性、当前依据、置信度和变更历史。每条变更引用作答 ID 及事件键。只有实际完成复测时才写「最近复测日期」。 |
-| plan → 训练任务库「训练目标」 | 上游写 `task_key, plan_version, horizon, purpose, window, trigger, scope_key, zsd_ids, search_not_before, search_request, budget_minutes, state`。计划状态用 `tentative / ready / deferred / cancelled`。具体日期已确定才写「训练日期」，窗口保存在区块。 |
+| plan → 训练任务库「训练目标」 | 上游写 `task_key, plan_version, horizon, purpose, window, trigger, scope_key, scope_status, zsd_ids, search_not_before, search_request, budget_minutes, state, evidence_rule_version, confidence, evidence_gaps`。计划状态用 `tentative / ready / deferred / cancelled`。具体日期已确定才写「训练日期」，窗口保存在区块。 |
 | selection_result → 检索与选题记录「每题评估与淘汰原因」 | 下游保存候选批次的 RW、计划版本、候选题及缺口。已发布候选交上游验收。 |
 | pack_result → 同批次「每题评估与淘汰原因」 | 下游凭放行清单记录成品状态、验收版本、已用题目小问和题包引用。发布顺序见 [异步搜题交接](async-selection.md)。 |
-| delivery → 训练任务库「任务复盘」 | 上游按计划版本和批次保存审核版本、审核结论、缺口、`approved_items`、成品检查和实际发放证据。验收状态用 `needs_research / approved_for_pack`。每项任务由上游维护唯一的 active_review，历史放行保留以便判读旧作答。成品检查和发出另记。历史作答沿用当次发放版本。 |
+| delivery → 训练任务库「任务复盘」 | 上游按计划版本和批次保存审核版本、审核结论、缺口、`approved_items`、成品检查和实际发放证据。验收状态用 `needs_research / scope_hold / approved_for_pack`。补搜只读当前 delivery，题目审核意见仅可存任务与批次指针及题目本身的缺陷。每项任务由上游维护唯一的 active_review，历史放行保留以便判读旧作答。成品检查和发出另记。历史作答沿用当次发放版本。 |
 | progress → 训练任务库「实际完成情况」 | 上游写 `answer_state, attempt_refs, scored_subitems, next_task_refs`。状态用 `awaiting_evidence / partial / completed`。按本次任务要求的可评分小问判断执行是否完成。保留已提交、未提交、明确跳过及未知的区别，已提交可带提示。独立达标由 mastery 另行判断。 |
 | attempt → 作答记录库「步骤得分与判分说明」 | 上游写 `attempt_key, event_keys, attempt_kind, plan_version, subitems, evidence_refs, grading_state`。每个小问记录考点、评分、关键步骤、独立性及提示或看答案的证据，区分首次、订正和复测。作答表顶层独立性按整题汇总，单问更正只改变该小问和受影响的汇总。 |
 | diagnosis → 错题诊断库「作答证据」 | 上游写 `diagnosis_key, attempt_key, subitem, zsd_id, evidence_refs`，订正及复测变更追加到「复测计划与结果历史」。 |

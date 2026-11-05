@@ -1,0 +1,634 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_key",
+        "plan_version",
+        "horizon",
+        "purpose",
+        "scope_key",
+        "scope_status",
+        "provisional_pack_authorized",
+        "zsd_ids",
+        "window",
+        "trigger",
+        "budget_minutes",
+        "state",
+        "search_not_before",
+        "search_request",
+        "evidence_rule_version",
+        "confidence",
+        "evidence_gaps",
+        "evidence_refs"
+      ],
+      "properties": {
+        "task_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "horizon": {
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope_status": {
+          "enum": [
+            "confirmed",
+            "provisional",
+            "unknown"
+          ]
+        },
+        "provisional_pack_authorized": {
+          "type": "boolean"
+        },
+        "provisional_authorization_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "zsd_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ZSD-[0-9]+$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "window": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start",
+                "end"
+              ],
+              "properties": {
+                "start": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "end": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "budget_minutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "enum": [
+            "tentative",
+            "ready",
+            "deferred",
+            "cancelled"
+          ]
+        },
+        "search_not_before": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "search_request": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "region",
+                "exam_type",
+                "grade",
+                "scope",
+                "source_priority",
+                "allowed_fallback",
+                "exclude_source_or_models",
+                "requirements"
+              ],
+              "properties": {
+                "region": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "exam_type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "grade": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_priority": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                },
+                "allowed_fallback": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 0
+                },
+                "exclude_source_or_models": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 0
+                },
+                "requirements": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "requirement_id",
+                      "zsd_ids",
+                      "exam_target_level",
+                      "training_level",
+                      "question_type",
+                      "count",
+                      "minutes",
+                      "required_actions",
+                      "keywords",
+                      "keyword_variants",
+                      "required_materials",
+                      "exclude_question_ids"
+                    ],
+                    "properties": {
+                      "requirement_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "zsd_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^ZSD-[0-9]+$"
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "exam_target_level": {
+                        "enum": [
+                          "L1",
+                          "L2",
+                          "L3",
+                          "L4"
+                        ]
+                      },
+                      "training_level": {
+                        "enum": [
+                          "L1",
+                          "L2",
+                          "L3",
+                          "L4"
+                        ]
+                      },
+                      "question_type": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "minutes": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "required_actions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "criterion",
+                            "required"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "criterion": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "required": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "minItems": 1
+                      },
+                      "keywords": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      },
+                      "keyword_variants": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 0
+                      },
+                      "required_materials": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      },
+                      "exclude_question_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^TM-[0-9]+$"
+                        },
+                        "minItems": 0,
+                        "uniqueItems": true
+                      }
+                    }
+                  },
+                  "minItems": 1
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_rule_version": {
+          "const": 1
+        },
+        "confidence": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^ZSD-[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "exam_target",
+              "mastery",
+              "stability"
+            ],
+            "properties": {
+              "exam_target": {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              },
+              "mastery": {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              },
+              "stability": {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          "minProperties": 1
+        },
+        "evidence_gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "zsd_id",
+              "axis",
+              "field",
+              "status",
+              "blocks",
+              "blocks_level",
+              "fix"
+            ],
+            "properties": {
+              "zsd_id": {
+                "type": "string",
+                "pattern": "^ZSD-[0-9]+$"
+              },
+              "axis": {
+                "enum": [
+                  "exam_target",
+                  "score_calibration",
+                  "mastery",
+                  "timing",
+                  "stability",
+                  "diagnosis"
+                ]
+              },
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "missing",
+                  "unknown",
+                  "unresolved"
+                ]
+              },
+              "blocks": {
+                "type": "string",
+                "minLength": 1
+              },
+              "blocks_level": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "L1",
+                      "L2",
+                      "L3",
+                      "L4"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fix": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 0
+        },
+        "parent_task_id": {
+          "type": "string",
+          "pattern": "^RW-[0-9]+$"
+        },
+        "evidence_refs": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^ZSD-[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "plan_version",
+        "batch_id",
+        "review_revision",
+        "scope_key",
+        "scope_status",
+        "status",
+        "active_review",
+        "reason",
+        "gaps",
+        "research_instructions",
+        "approved_items"
+      ],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^RW-[0-9]+$"
+        },
+        "plan_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "batch_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "scope_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope_status": {
+          "enum": [
+            "confirmed",
+            "provisional",
+            "unknown"
+          ]
+        },
+        "status": {
+          "enum": [
+            "needs_research",
+            "scope_hold",
+            "approved_for_pack"
+          ]
+        },
+        "active_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "plan_version",
+            "batch_id",
+            "review_revision"
+          ],
+          "properties": {
+            "plan_version": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "batch_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "review_revision": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "research_instructions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "approved_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "question_id",
+              "subitems",
+              "requirement_id",
+              "content_ref",
+              "actual_level",
+              "action_results"
+            ],
+            "properties": {
+              "question_id": {
+                "type": "string",
+                "pattern": "^TM-[0-9]+$"
+              },
+              "subitems": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "requirement_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "content_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "actual_level": {
+                "enum": [
+                  "L1",
+                  "L2",
+                  "L3",
+                  "L4"
+                ]
+              },
+              "action_results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "result",
+                    "evidence"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "result": {
+                      "enum": [
+                        "pass",
+                        "fail",
+                        "unknown"
+                      ]
+                    },
+                    "evidence": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "minItems": 1
+              }
+            }
+          },
+          "minItems": 0
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "minItems": 0
+        }
+      }
+    }
+  }
+}

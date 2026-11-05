@@ -2,11 +2,15 @@
 
 适用于已授权的搜题运行。可以由上游当场调用，也可以由用户或已配置的调度稍后指令另一个 Agent 执行。任务进入可搜索状态只表示资料就绪，执行仍以实际指令和授权为准。
 
+## 契约校验
+
+新写入的计划和验收采用 [KMP v1 schema](../schemas/kmp-v1.json)。在本地用 `python scripts/validate_contract.py plan.json` 校验。校验器依赖 `jsonschema>=4,<5`，可在隔离环境安装。写新验收加 `--delivery delivery.json --batch batch.json`，已有验收时必须加 `--previous current-delivery.json`，并在写前重读当前指针。制卷及发放前对飞书当前验收加 `--release` 校验，再比对实际待用题文和附件。若输入不匹配，保留待复核状态。历史计划可只读，旧结构进入新一轮制卷前由上游补齐并复验。
+
 ## 1. 上游先把任务写完整
 
 将要求写在「训练任务库 → 训练目标」的 `[KMP/plan/v1]` 区块。训练任务关联原 ZSD。RW 由飞书产生。选题端按 RW 或已获授权的日期窗口读取，无需访问此前聊天。
 
-一份可交接的 plan 至少包括稳定 `task_key`、递增 `plan_version`、`horizon`、`purpose`、`scope_key`、`zsd_ids`、`window`、`trigger`、`budget_minutes`、`state`、`search_not_before` 和 `search_request`。仅当搜索要求完整且满足放行条件时写 `state: ready`。`search_not_before` 用带时区的时间，表示最早可以搜题，和孩子实际做题的窗口分开。周、月暂定计划进入执行窗口前保留 `tentative`。以下为虚构示例。
+新计划带稳定任务键、计划版本、范围状态、目标及搜索条件。按 [证据检查](evidence-preflight.md) 汇总每个 ZSD 的 confidence、evidence_refs 和 evidence_gaps。任务的 `minutes` 是该项要求所有题的总预算。仅当搜索要求完整且满足放行条件时写 `state: ready`。`search_not_before` 用带时区的时间，表示最早可以搜题，和孩子实际做题的窗口分开。周、月暂定计划进入执行窗口前保留 `tentative`。以下为虚构示例。
 
 ```json
 {
@@ -15,8 +19,13 @@
   "horizon": "day",
   "purpose": "迁移",
   "scope_key": "2026-11-midterm-v1",
-  "zsd_ids": ["ZSD-000028"],
-  "window": {"start": "2026-11-06T19:00:00+08:00", "end": "2026-11-06T19:20:00+08:00"},
+  "zsd_ids": [
+    "ZSD-000028"
+  ],
+  "window": {
+    "start": "2026-11-06T19:00:00+08:00",
+    "end": "2026-11-06T19:20:00+08:00"
+  },
   "trigger": "到搜题时间且收到执行指令",
   "budget_minutes": 15,
   "state": "ready",
@@ -26,27 +35,94 @@
     "exam_type": "校内期中",
     "grade": "九年级上学期",
     "scope": "已学的二次函数和几何面积",
-    "source_priority": ["广州九上期中原题"],
+    "source_priority": [
+      "广州九上期中原题"
+    ],
     "allowed_fallback": [],
-    "exclude_source_or_models": ["围栏单矩形模型", "以往已经用过的同源题"],
-    "requirements": [{
-      "zsd_ids": ["ZSD-000028"],
-      "exam_target_level": "L3",
-      "training_level": "L3",
-      "question_type": "解答题",
-      "count": 1,
-      "minutes": 15,
-      "required_actions": ["自行分割或补形", "列面积函数及可行域", "求并验证最值"],
-      "keywords": ["二次函数", "面积分割", "割补法", "动点", "最值"],
-      "keyword_variants": ["补形", "面积函数"],
-      "required_materials": ["完整题干", "几何图", "答案与解析"],
-      "exclude_question_ids": []
-    }]
+    "exclude_source_or_models": [
+      "围栏单矩形模型",
+      "以往已经用过的同源题"
+    ],
+    "requirements": [
+      {
+        "zsd_ids": [
+          "ZSD-000028"
+        ],
+        "exam_target_level": "L3",
+        "training_level": "L3",
+        "question_type": "解答题",
+        "count": 1,
+        "minutes": 15,
+        "required_actions": [
+          {
+            "id": "a1",
+            "criterion": "自行分割或补形",
+            "required": true
+          },
+          {
+            "id": "a2",
+            "criterion": "列面积函数及可行域",
+            "required": true
+          },
+          {
+            "id": "a3",
+            "criterion": "求并验证最值",
+            "required": true
+          }
+        ],
+        "keywords": [
+          "二次函数",
+          "面积分割",
+          "割补法",
+          "动点",
+          "最值"
+        ],
+        "keyword_variants": [
+          "补形",
+          "面积函数"
+        ],
+        "required_materials": [
+          "完整题干",
+          "几何图",
+          "答案与解析"
+        ],
+        "exclude_question_ids": [],
+        "requirement_id": "R1"
+      }
+    ]
+  },
+  "scope_status": "confirmed",
+  "provisional_pack_authorized": false,
+  "evidence_rule_version": 1,
+  "confidence": {
+    "ZSD-000028": {
+      "exam_target": "high",
+      "mastery": "unknown",
+      "stability": "unknown"
+    }
+  },
+  "evidence_gaps": [
+    {
+      "zsd_id": "ZSD-000028",
+      "axis": "mastery",
+      "field": "目标层级独立作答",
+      "status": "missing",
+      "blocks": "当前目标已达成",
+      "blocks_level": "L3",
+      "fix": "收集首次独立作答"
+    }
+  ],
+  "evidence_refs": {
+    "ZSD-000028": [
+      "示例同校原卷与教师范围"
+    ]
   }
 }
 ```
 
-若改动范围、训练层级、来源限制、题量或其他影响交付的要求，递增 `plan_version`，保留原任务键和已发放版本的记录。以当前版本为下一次检索的依据。
+若改动范围、训练层级、来源限制、题量或其他影响交付的要求，递增 `plan_version`，保留原任务键和已发放版本的记录。同版补搜只开新批次。重复读取或相同决定重试沿用原审核版本。每次新的验收决定用任务内单调递增的 `review_revision`，它就是审核轮次。
+
+`scope_status: provisional` 默认允许搜候选。经本轮明确授权时，才写 `provisional_pack_authorized: true` 和授权引用，并以暂定范围制卷。题目已合格但范围未放行时写 `scope_hold`。范围不明时保持候选阶段。正式范围到达后比较当前内容，影响交付时升级计划版本、撤销旧的未发放放行并重验；历史题包和作答继续按原版本追溯。审核与成品记下 scope_key 和 scope_status。
 
 ## 2. 下游搜题，先交候选
 
@@ -72,9 +148,9 @@
 
 ## 3. 上游验收，放行或退回
 
-1. 重读当前 plan、指定的已发布批次和题目记录，按 [验收要求](assessment-and-handoff.md#候选题与题包验收) 逐题逐小问核对原图、答案、实际考查层级、必测动作、来源限制、重复与时间。此前已核验的题若纳入补搜批次，复核题文未变化且仍符合本轮计划。
-2. 把决定写入「训练任务库 → 任务复盘」的 `[KMP/delivery/v1]`，按计划版本与批次保留历史。上游同时写唯一的 `active_review` 指向当前 plan_version、batch_id 与 review_revision。新验收或退回取代旧指针，已被替代的放行只作历史。写 `plan_version`、`batch_id`、`review_revision`、`status`、审核理由及缺口。只有拟入包的每道题或小问均通过、且整组满足当前搜索要求时，才记 `approved_for_pack`。同时保存 `approved_items`，逐项列 TM、允许的小问及受审内容指纹或可核对的题文版本。被排除的冗余候选无需通过。
-3. 条件未满足时记 `needs_research`，逐条写不通过题号、未满足的要求、修正搜索词或筛选条件，以及可保留的小问。在原计划约束内补搜时，Agent 把退回记录交给下游，另开稳定批次槽，记录 `supersedes_batch_id` 并关联本轮保留和替换的候选，回到第 2 节。改变难度、题源边界、题量等任务要求时由上游更新 plan_version，再开启新版本批次。默认同一轮执行最多立即补搜一次，之后将缺口留给下一次明确指令或既定重试规则。
+1. 重读当前 plan、指定的已发布批次和题目记录，按 [验收要求](assessment-and-handoff.md#候选题与题包验收) 逐题逐小问核对原图、答案、实际考查层级、必测动作、来源限制、重复与时间。此前已核验的题若纳入补搜批次，复核题文未变化且仍符合本轮计划。当前计划下已有活跃审核时，只有同批新决定或明确继承该批次的后续批次可更新指针。已被替代的批次只读。
+2. 把决定写入「训练任务库 → 任务复盘」的 `[KMP/delivery/v1]`，按计划版本与批次保留历史。上游同时写唯一的 `active_review` 指向当前 plan_version、batch_id 与 review_revision。新验收或退回取代旧指针，已被替代的放行只作历史。写 `plan_version`、`batch_id`、`review_revision`、`status`、审核理由及缺口。每个获批项引用 requirement_id，并对 required_actions 的每个动作 ID 写 pass、fail 或 unknown 和小问证据。必测动作全部 pass 才能放行。只有拟入包的每道题或小问均通过、且整组满足当前搜索要求时，才记 `approved_for_pack`。同时保存 `approved_items`，逐项列 TM、允许的小问及受审内容指纹或可核对的题文版本。被排除的冗余候选无需通过。
+3. 条件未满足时记 `needs_research`，逐条写不通过题号、未满足的要求、修正搜索词或筛选条件，以及可保留的小问。任务复盘中的当前 delivery 是补搜原因唯一权威，题目侧只留 RW 和批次指针。题目自身的通用缺陷可另记。在原计划约束内补搜时，Agent 把退回记录交给下游，另开稳定批次槽，记录 `supersedes_batch_id` 并关联本轮保留和替换的候选，回到第 2 节。改变难度、题源边界、题量等任务要求时由上游更新 plan_version，再开启新版本批次。默认同一轮执行最多立即补搜一次，之后将缺口留给下一次明确指令或既定重试规则。
 
 ## 4. 下游凭放行记录制作题包
 
