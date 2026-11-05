@@ -1,0 +1,4 @@
+interface:
+  display_name: "知识点掌握度与训练规划"
+  short_description: "根据飞书任务、学校原卷和真实作答定目标并滚动安排后续训练"
+  default_prompt: "使用 $knowledge-mastery-planner 读取飞书任务和作答证据，更新训练计划。"
