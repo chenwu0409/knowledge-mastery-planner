@@ -2,7 +2,7 @@
 
 本项目的运行记录保存在 [2027广州中考·AI精准训练知识库](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc)。新 Agent 从这个 Base 读取任务，使用已有飞书权限。项目目录用于查阅文档和原始材料。 [项目目录](https://icnrubhlu5x8.feishu.cn/drive/folder/XS4ufQ3kil1p9Bd9rs8c1lQWnYb)
 
-- 地区为广东省广州市，时区为 `Asia/Shanghai`，任务设置考试类型。
+- 地区为广东省广州市，时区为 `Asia/Shanghai`，任务设置考试类型。项目的下游是 `question-bank-selection`。 [下游仓库](https://github.com/chenwu0409/question-bank-selection)
 - 启动盘点时主库已存在六张业务表。此前项目工作增补了字段和「检索与选题记录」表。本页以 2026-11-05 只读回查的现有七表为准。
 - 对接既有主库时，先校验 Base、表 ID、字段类型、枚举和关联目标。若绑定不可访问或结构不符，报告缺项。另建 Base 仅在新建项目的明确授权下执行。
 
