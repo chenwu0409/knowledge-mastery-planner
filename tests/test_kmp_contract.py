@@ -28,11 +28,14 @@ class GateTest(unittest.TestCase):
                     "batch_id": "B01", "status": "published", "candidate_question_ids": ["TM-000001", "TM-000002"]}
         self.b02 = dict(self.b01, batch_id="B02", supersedes_batch_id="B01",
                         candidate_question_ids=["TM-000001", "TM-000003"])
+        self.checks = [dict(item=item, result="pass", evidence="见候选记录")
+                       for item in ("必测动作", "难度档", "配图", "答案可验算", "去重键", "科目配比")]
         self.reject = dict(task_id="RW-000001", plan_version=2, batch_id="B01", review_revision=1,
                            scope_key=self.plan["scope_key"], scope_status="confirmed",
                            status="needs_research", reason="缺另一种作用线情境",
                            active_review=dict(plan_version=2, batch_id="B01", review_revision=1),
-                           gaps=["第二题重复"], research_instructions=["搜索斜向作用线"], approved_items=[])
+                           gaps=["第二题重复"], research_instructions=["搜索斜向作用线"], approved_items=[],
+                           checks=self.checks)
         self.approve = dict(self.reject, batch_id="B02", review_revision=2, status="approved_for_pack",
                             reason="两题均满足要求", gaps=[], research_instructions=[],
                             active_review=dict(plan_version=2, batch_id="B02", review_revision=2),
@@ -53,6 +56,14 @@ class GateTest(unittest.TestCase):
             validate_delivery(self.plan, replay, self.b01, self.approve)
         with self.assertRaisesRegex(ValueError, "stale"):
             validate_delivery(dict(self.plan, plan_version=3), self.approve, self.b02, for_release=True)
+
+    def test_legacy_delivery_is_marked_not_rejected(self):
+        legacy = {key: value for key, value in self.approve.items() if key != "checks"}
+        self.assertIsNone(validate_delivery(self.plan, self.approve, self.b02, for_release=True))
+        self.assertEqual(validate_delivery(self.plan, legacy, self.b02, for_release=True),
+                         {"legacy_no_checks": True})
+        with self.assertRaisesRegex(ValueError, "six checks"):
+            validate_delivery(self.plan, legacy, self.b02)
 
     def test_missing_action_and_provisional(self):
         incomplete = copy.deepcopy(self.approve)

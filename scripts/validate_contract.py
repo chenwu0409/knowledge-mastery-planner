@@ -9,10 +9,15 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 SCHEMA = json.loads((Path(__file__).resolve().parents[1] / "schemas/kmp-v1.json").read_text(encoding="utf-8"))
 GATE_KEYS = ("plan_version", "batch_id", "review_revision")
+LEGACY_MARKER = "legacy_no_checks"
 
 
-def validate_shape(kind, document):
+def validate_shape(kind, document, *, tolerate_legacy_checks=False):
     schema = {**SCHEMA, "$ref": f"#/$defs/{kind}"}
+    if tolerate_legacy_checks and kind == "delivery":
+        delivery = SCHEMA["$defs"]["delivery"]
+        schema = {**SCHEMA, "$defs": {**SCHEMA["$defs"], "delivery": {
+            **delivery, "required": [key for key in delivery["required"] if key != "checks"]}}}
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(document)
 
 
@@ -50,7 +55,11 @@ def validate_plan(plan):
 
 def validate_delivery(plan, delivery, batch, previous=None, *, for_release=False):
     validate_plan(plan)
-    validate_shape("delivery", delivery)
+    legacy = "checks" not in delivery
+    if legacy and not for_release:
+        raise ValueError("new review must record the six checks")
+    validate_shape("delivery", delivery, tolerate_legacy_checks=legacy)
+    marker = {LEGACY_MARKER: True} if legacy else None
     gate = {key: delivery[key] for key in GATE_KEYS}
     if gate != delivery["active_review"] or delivery["batch_id"] != batch.get("batch_id"):
         raise ValueError("review is not the active batch and revision")
@@ -79,7 +88,7 @@ def validate_delivery(plan, delivery, batch, previous=None, *, for_release=False
             raise ValueError("a held or returned review must explain gaps and release no items")
         if status == "needs_research" and not delivery["research_instructions"]:
             raise ValueError("a returned review needs actionable search instructions")
-        return
+        return marker
     if delivery["gaps"] or delivery["research_instructions"]:
         raise ValueError("approval has unresolved gaps")
     if plan["scope_status"] != "confirmed" and not plan["provisional_pack_authorized"]:
@@ -106,6 +115,7 @@ def validate_delivery(plan, delivery, batch, previous=None, *, for_release=False
             raise ValueError("approved item lacks passing evidence for mandatory actions")
     if counts != Counter({key: req["count"] for key, req in requirements.items()}):
         raise ValueError("approved items do not satisfy the requested counts")
+    return marker
 
 
 def read(path):
@@ -125,8 +135,10 @@ if __name__ == "__main__":
         if args.delivery and args.batch:
             if args.release and args.previous:
                 parser.error("--release reads the current gate, not a proposed transition")
-            validate_delivery(plan, read(args.delivery), read(args.batch),
-                              read(args.previous) if args.previous else None, for_release=args.release)
+            marker = validate_delivery(plan, read(args.delivery), read(args.batch),
+                                       read(args.previous) if args.previous else None, for_release=args.release)
+            if marker:
+                print(f"{LEGACY_MARKER}: true")
         elif args.delivery or args.batch or args.previous or args.release:
             parser.error("delivery operations require both --delivery and --batch")
         else:

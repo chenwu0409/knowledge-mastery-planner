@@ -10,7 +10,7 @@
 
 将要求写在「训练任务库 → 训练目标」的 `[KMP/plan/v1]` 区块。训练任务关联原 ZSD。RW 由飞书产生。选题端按 RW 或已获授权的日期窗口读取，无需访问此前聊天。
 
-新计划带稳定任务键、计划版本、范围状态、目标及搜索条件。按 [证据检查](evidence-preflight.md) 汇总每个 ZSD 的 confidence、evidence_refs 和 evidence_gaps。任务的 `minutes` 是该项要求所有题的总预算。仅当搜索要求完整且满足放行条件时写 `state: ready`。`search_not_before` 用带时区的时间，表示最早可以搜题，和孩子实际做题的窗口分开。周、月暂定计划进入执行窗口前保留 `tentative`。以下为虚构示例。
+新计划带稳定任务键、计划版本、范围状态、目标及搜索条件。按 [证据检查](evidence-preflight.md) 汇总每个 ZSD 的 confidence、evidence_refs 和 evidence_gaps。任务的 `minutes` 是该项要求所有题的总预算；同一任务的补搜轮次上限写在 `research_round_limit`，默认 2。仅当搜索要求完整且满足放行条件时写 `state: ready`。`search_not_before` 用带时区的时间，表示最早可以搜题，和孩子实际做题的窗口分开。周、月暂定计划进入执行窗口前保留 `tentative`。以下为虚构示例。
 
 ```json
 {
@@ -93,6 +93,7 @@
   },
   "scope_status": "confirmed",
   "provisional_pack_authorized": false,
+  "research_round_limit": 2,
   "evidence_rule_version": 1,
   "confidence": {
     "ZSD-000028": {
@@ -148,9 +149,9 @@
 
 ## 3. 上游验收，放行或退回
 
-1. 重读当前 plan、指定的已发布批次和题目记录，按 [验收要求](assessment-and-handoff.md#候选题与题包验收) 逐题逐小问核对原图、答案、实际考查层级、必测动作、来源限制、重复与时间。此前已核验的题若纳入补搜批次，复核题文未变化且仍符合本轮计划。当前计划下已有活跃审核时，只有同批新决定或明确继承该批次的后续批次可更新指针。已被替代的批次只读。
-2. 把决定写入「训练任务库 → 任务复盘」的 `[KMP/delivery/v1]`，按计划版本与批次保留历史。上游同时写唯一的 `active_review` 指向当前 plan_version、batch_id 与 review_revision。新验收或退回取代旧指针，已被替代的放行只作历史。写 `plan_version`、`batch_id`、`review_revision`、`status`、审核理由及缺口。每个获批项引用 requirement_id，并对 required_actions 的每个动作 ID 写 pass、fail 或 unknown 和小问证据。必测动作全部 pass 才能放行。只有拟入包的每道题或小问均通过、且整组满足当前搜索要求时，才记 `approved_for_pack`。同时保存 `approved_items`，逐项列 TM、允许的小问及受审内容指纹或可核对的题文版本。被排除的冗余候选无需通过。
-3. 条件未满足时记 `needs_research`，逐条写不通过题号、未满足的要求、修正搜索词或筛选条件，以及可保留的小问。任务复盘中的当前 delivery 是补搜原因唯一权威，题目侧只留 RW 和批次指针。题目自身的通用缺陷可另记。在原计划约束内补搜时，Agent 把退回记录交给下游，另开稳定批次槽，记录 `supersedes_batch_id` 并关联本轮保留和替换的候选，回到第 2 节。改变难度、题源边界、题量等任务要求时由上游更新 plan_version，再开启新版本批次。默认同一轮执行最多立即补搜一次，之后将缺口留给下一次明确指令或既定重试规则。
+1. 重读当前 plan、指定的已发布批次和题目记录，按 [验收要求](assessment-and-handoff.md#候选题与题包验收) 逐题逐小问核对原图、答案、实际考查层级、必测动作、来源限制、重复与时间。此前已核验的题若纳入补搜批次，复核题文未变化且仍符合本轮计划。当前计划下已有活跃审核时，只有同批新决定或明确继承该批次的后续批次可更新指针。已被替代的批次只读。题目库与候选记录只有下游写；上游只读，不建 TM、不改题，复核结论以回库回读结果为准，不采信下游自报清单。
+2. 把决定写入「训练任务库 → 任务复盘」的 `[KMP/delivery/v1]`，按计划版本与批次保留历史。上游同时写唯一的 `active_review` 指向当前 plan_version、batch_id 与 review_revision。新验收或退回取代旧指针，已被替代的放行只作历史。写 `plan_version`、`batch_id`、`review_revision`、`status`、审核理由及缺口。新制卷同时写必填的 `checks`：必测动作、难度档、配图、答案可验算、去重键、科目配比逐项给 `pass` / `fail` / `unknown` 及证据，禁止「基本符合」「大致达标」这类模糊表述。历史已写入的 delivery 缺 `checks` 不追溯校验，校验器标 `legacy_no_checks: true` 并放行。每个获批项引用 requirement_id，并对 required_actions 的每个动作 ID 写 pass、fail 或 unknown 和小问证据。必测动作全部 pass 才能放行。只有拟入包的每道题或小问均通过、且整组满足当前搜索要求时，才记 `approved_for_pack`。同时保存 `approved_items`，逐项列 TM、允许的小问及受审内容指纹或可核对的题文版本。被排除的冗余候选无需通过。
+3. 条件未满足时记 `needs_research`，逐条写不通过题号、未满足的要求、修正搜索词或筛选条件，以及可保留的小问。任务复盘中的当前 delivery 是补搜原因唯一权威，题目侧只留 RW 和批次指针。题目自身的通用缺陷可另记。在原计划约束内补搜时，Agent 把退回记录交给下游，另开稳定批次槽，记录 `supersedes_batch_id` 并关联本轮保留和替换的候选，回到第 2 节。改变难度、题源边界、题量等任务要求时由上游更新 plan_version，再开启新版本批次。补搜上限按 plan 的 `research_round_limit`（默认 2）；未达上限时立即补搜，达到上限仍不满足则按 ① 放宽难度档 → ② 换同知识点邻近题 → ③ 标「证据不足」交人工 的顺序降级，并把 `round`、`option`、`reason` 写入 delivery 的 `degradation`，不得继续循环。降级属计划变更，同样由上游升级 plan_version 后再开新批次。
 
 ## 4. 下游凭放行记录制作题包
 
