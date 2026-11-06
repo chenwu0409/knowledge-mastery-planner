@@ -46,14 +46,28 @@
 
 | 判定项 | 真 / 假 判据 | 数据来源 |
 |---|---|---|
-| 必测动作 | `required_actions` 逐 ID 给 `pass` / `fail` / `unknown`；`required=true` 必须全 pass | `approved_items.action_results` + 原图比对 |
+| 必测动作 | `required_actions` 逐 ID 给 `pass` / `fail` / `unknown`；ID 必须来自 plan 的显式动作，不得用 ZSD 代理编号；`required=true` 必须全 pass | `approved_items.action_results` + 原图比对 |
 | 难度档 | 题目库「难度」是否落在计划允许档 | 题目库 `难度` |
-| 配图 | 任务要求几何图/装置图时，`题目图片` 非空且关键元素可见 | 题目库附件 + 逐图读图 |
-| 答案可验算 | `标准答案` 存在且能独立复现；非一手须标注 | `标准答案` + 验算记录 |
-| 去重键 | `去重键` 唯一且不与主库已有题重复 | `去重键` + 查重结果 |
-| 科目配比 | 各科题量等于计划题量与配比 | 计划块 vs 候选清单 |
+| 配图 | 按 `image_requirement` 三档：`none`＝题面自足即 pass；`illustrative`＝不看图也能独立解题才 pass，否则按 `required`；`required`＝必须逐图读图确认关键元素可见，未读图记 `unknown`，图缺或不可读记 `needs_evidence`（图不可读） | 题目库附件 + 逐图读图 |
+| 答案可验算 | 先标 `answer_source`：`platform_visible` 须答案存在且独立复现；`login_required` 记 `needs_evidence`（答案墙）；`no_answer`（作图/开放）须独立验算或人工核对，未核对记 `unknown`；`independent_only` 须附验算记录。非一手须标注 | `标准答案` / 验算记录 |
+| 去重键 | `去重键` 唯一且不与主库重复；题干指纹判「结构重复」（同题型换数字，如 79m+1m 门与 42m+2m 门）记 `fail`，除非 delivery 写 `dedupe_exception` 并用 `added_actions` 说明新增覆盖了既有题缺失的必测动作 | `去重键` + 查重结果 |
+| 科目配比 | 各科题量等于计划题量与配比；只补候选、未入任务时本项不构成约束，记 `pass` 并在证据注明「候选区不占配比」 | 计划块 vs 候选清单 |
 
 结论只允许 `pass` / `fail` / `unknown`。**禁止**「基本符合」「大致达标」「大体满足」「差不多」「基本可以」等模糊表述；出现即视为未完成验收，退回重写。小问级「部分通过」必须落成具体哪些小问 `pass`、哪些 `fail`，不得作为整题结论。发现题目缺陷时先隔离错误小问及相应判分。
+
+### checks 粒度
+
+`checks` 支持两种粒度：`scope: subquestion` 逐小问写，附 `subquestion_ids`；`scope: question` 整题写，必须用 `merged_subquestions` 列出合并了哪几个小问，并在 evidence 中逐问可追溯。混合粒度允许，但同一判定项不得既整题又逐小问重复计分。未标粒度的按整题处理，校验器要求补 `merged_subquestions`。
+
+### unknown 的出口
+
+复核出现 `unknown` 先分因，不得一律塞进补搜：
+
+- 缺题面、图不可读、平台无答案、答案墙 → 记 `needs_evidence`，写 `evidence_gaps`，退回补题面或换源，不占 `research_round_limit`；
+- 缺可搜到的合规题 → 记 `needs_research`，在轮次上限内补搜；
+- 动作是否发生、层级是否达标无法判定 → 交人工，并在 `reason` 写明无法判定的具体小问。
+
+证据类 `unknown` 若被写成 `needs_research`，视为验收无效。
 
 ### 回读校验
 

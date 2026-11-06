@@ -21,15 +21,17 @@ description: 建立或维护飞书训练知识库，依据考试证据为知识�
 4. **读作答。** 用当次任务、题目、小问和作答轮次定位证据。保留首次作答、订正、复测和提示，按有效独立证据更新能力与差距。题目缺陷进入题包修订，缺作答进入待采集。两种状态都不进入孩子的补救欠账。
 5. **滚动调度。** 在每天时间预算内安排新任务与复测。将后续日、周、月的计划写回既有任务库，保留日期或窗口、触发条件及依据。记录本轮核对或更新的 ID、影响的时间窗口、未决缺口与恢复入口。
 
-## 协作规则（共识 v1 · 2026-11-06，一周实测后修订）
+## 协作规则（共识 v2 · 2026-11-06，17 题实测后修订）
 
-与 KMP v1 契约同时生效；与旧文冲突时以本节为准。
+与 KMP v1 契约同时生效；与旧文冲突时以本节为准。v2 相对 v1 改了四处：降级路径、`needs_evidence` 出口、配图/答案判定分级、去重键与 checks 粒度。
 
-1. **复核逐项字段化。** 验收结论只写 `pass` / `fail` / `unknown`，逐项覆盖必测动作（`required_actions` 逐 ID）、难度档、配图、答案可验算、去重键、科目配比，写进 `[KMP/delivery/v1]` 的 `checks` 字段（**新制卷必填；历史已写入的 delivery 不追溯校验，校验器标 `legacy_no_checks: true`**）。判断依据与数据来源见 [候选题与题包验收](references/assessment-and-handoff.md#候选题与题包验收)。禁用「基本符合」「大致达标」「大体满足」「差不多」等模糊表述。
-2. **补搜上限默认 2 轮，超限强制降级。** 轮次上限写在 plan 的 `research_round_limit`（默认 2，可按任务调整）。两次补搜后仍不满足，按 ① 放宽难度档 → ② 换同知识点邻近题 → ③ 标「证据不足」交人工 的顺序处置，把轮次、选项和原因写进 delivery 的 `degradation`，不得静默跳过或继续循环。降级属计划变更，由上游更新 `plan_version`，下游不得自行降级。
-3. **单写权。** 题目库与候选记录只有下游写，上游只读；上游不建 TM、不改题、不改候选。上游只写自己的区块字段（见 [飞书读写 SOP](references/feishu-sop.md#单写权与回读)）。复核必须按 `task_id` / `batch_id` / `TM` 回库回读核对写入、关联与版本，不能只凭下游交上来的清单下结论。
-4. **作答回流闸门。** 漏题、图不清、题号对不上（RW→TM 不成立）、无法验算（关键步骤不可读）四类不进入 gap 计算；任务 `progress` 记 `awaiting_evidence`，掌握度不升不降，按 [作答回流闸门](references/evidence-and-scheduling.md#作答回流闸门) 退回用户补件。
-5. **账本只读。** 掌握程度与历史错误由知识点库「掌握状态变更历史」、错题诊断库、作答记录库承载；上游只读账本并按新证据**追加**记录，不重算历史、不覆盖已确认结论。
-6. **状态语义。** `[KMP/plan/v1]`＝上游写的选题条件（`state=ready` 才可搜）；`[KMP/delivery/v1]`＝上游写的验收结论（`approved_for_pack` 放行制卷 / `needs_research` 退回补搜 / `scope_hold` 题合格但范围未放行）；三个状态不得混用或自行新增。
+1. **复核逐项字段化。** 验收结论只写 `pass` / `fail` / `unknown`，逐项覆盖必测动作（`required_actions` 逐 ID，ID 必须来自知识点库「必测动作」或 plan 的显式 `required_actions`；两者都没有时才可写 `ZSD-xxx-A*` 临时编号并标 `provisional_action: true`，下一轮补录）、难度档、配图、答案可验算、去重键、科目配比，写进 `[KMP/delivery/v1]` 的 `checks`（**新制卷必填；历史已写入的 delivery 不追溯校验，校验器标 `legacy_no_checks: true`**）。可按小问或整题写：整题级必须用 `merged_subquestions` 列明合并了哪几个小问。禁用「基本符合」「大致达标」「大体满足」「差不多」等模糊表述。
+2. **补搜上限默认 2 轮；降级改走 v2 路径。** 轮次上限写在 plan 的 `research_round_limit`（默认 2）。未达上限且缺的是「可搜到的合规题」时立即补搜；达到上限仍不满足，按 ① 换情境不换知识点 → ② 换源/补题面 → ③ 上游显式重定目标层级（写 `level_change` 的 from/to/reason 并升 `plan_version`）→ ④ 交人工 的顺序处置，把 `round`、`option`、`reason` 写进 delivery 的 `degradation`。**禁止为凑 L3 降到易档，禁止下游自行换到其他 ZSD**；换 ZSD 只能由上游先改级。
+3. **`needs_evidence` 出口。** 题面截断、图不可读、平台无答案、答案墙不是「再搜一轮」能解决的：记 `needs_evidence`，在 `evidence_gaps` 逐条写类型、题号和细节，退回补题面或换源。它不消耗 `research_round_limit`、不触发降级；证据类 `unknown` 若被写成 `needs_research`，视为验收无效。
+4. **单写权。** 题目库与候选记录只有下游写，上游只读；上游不建 TM、不改题、不改候选。上游只写自己的区块字段（见 [飞书读写 SOP](references/feishu-sop.md#单写权与回读)）。复核必须按 `task_id` / `batch_id` / `TM` 回库回读核对写入、关联与版本，不能只凭下游交上来的清单下结论。
+5. **配图三档。** plan 的每条 requirement 标 `image_requirement`：`required`（必需图，必须逐图读图确认关键元素可见）、`illustrative`（示意图，不看图也能独立解题才算 pass）、`none`（无需图）。未读图标 `unknown`，图缺或不可读转 `needs_evidence`。
+6. **答案可验算先分源。** 标 `answer_source`：`platform_visible`（平台答案存在且可独立复现）、`login_required`（答案墙，转 `needs_evidence`）、`no_answer`（作图/开放题，须独立验算或人工核对）、`independent_only`（附验算记录）。站点能力限制如实写进交付，不把平台缺答案一律记成 unknown。
+7. **作答回流闸门与账本只读。** 漏题、图不清、题号对不上（RW→TM 不成立）、无法验算四类不进入 gap 计算；任务 `progress` 记 `awaiting_evidence`，掌握度不升不降，按 [作答回流闸门](references/evidence-and-scheduling.md#作答回流闸门) 退回补件。掌握程度与历史错误只由账本承载，上游只读并追加，不重算历史、不覆盖已确认结论。
+8. **状态语义。** `[KMP/plan/v1]`＝上游写的选题条件（`state=ready` 才可搜）；`[KMP/delivery/v1]`＝上游写的验收结论（`approved_for_pack` 放行制卷 / `needs_research` 补搜 / `needs_evidence` 补件换源 / `scope_hold` 题合格但范围未放行）。四种状态不得混用或自行新增。候选区与 `required_actions` 已定案：候选写独立「选题候选」表（`tblXi52Q07kUbdr5`），必测动作存知识点库「必测动作」/「必测动作ID」字段，题目侧命中动作写题目库「考查方法」的 `[KMP/actions/v1]` 区块；详见 [飞书读写 SOP](references/feishu-sop.md#候选区与必测动作字段2026-11-06-定案)。
 
 完成一次运行时，能从记录追溯到触发证据、计划、挂题、审核、作答和下一次任务。缺少任何关键输入时，明确指出停在哪个环节以及可以接续的记录。

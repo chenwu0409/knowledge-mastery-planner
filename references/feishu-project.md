@@ -3,7 +3,7 @@
 本项目的运行记录保存在 [2027广州中考·AI精准训练知识库](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc)。新 Agent 从这个 Base 读取任务，使用已有飞书权限。项目目录用于查阅文档和原始材料。 [项目目录](https://icnrubhlu5x8.feishu.cn/drive/folder/XS4ufQ3kil1p9Bd9rs8c1lQWnYb)
 
 - 地区为广东省广州市，时区为 `Asia/Shanghai`，任务设置考试类型。项目的下游是 `question-bank-selection`。 [下游仓库](https://github.com/chenwu0409/question-bank-selection)
-- 启动盘点时主库已存在六张业务表。此前项目工作增补了字段和「检索与选题记录」表。本页以 2026-11-05 只读回查的现有七表为准。
+- 启动盘点时主库已存在六张业务表。此前项目工作增补了字段、「检索与选题记录」表（2026-11-05）与「选题候选」表（2026-11-06）。本页以 2026-11-06 只读回查的现有八表为准。
 - 对接既有主库时，先校验 Base、表 ID、字段类型、枚举和关联目标。若绑定不可访问或结构不符，报告缺项。另建 Base 仅在新建项目的明确授权下执行。
 
 | 业务表 | 当前入口 |
@@ -12,6 +12,7 @@
 | 训练任务库 | [tblFEVEPllFOztXp](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc?table=tblFEVEPllFOztXp) |
 | 题目库 | [tblFlwLDZkzQX2Wq](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc?table=tblFlwLDZkzQX2Wq) |
 | 检索与选题记录 | [tblS8boB3Zm90SHg](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc?table=tblS8boB3Zm90SHg) |
+| 选题候选 | [tblXi52Q07kUbdr5](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc?table=tblXi52Q07kUbdr5) |
 | 作答记录库 | [tblzcNjsaKXHHN1v](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc?table=tblzcNjsaKXHHN1v) |
 | 错题诊断库 | [tbl3zThuOK7ij1nm](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc?table=tbl3zThuOK7ij1nm) |
 | 考试成绩库 | [tble5aWe5aO4P90D](https://icnrubhlu5x8.feishu.cn/base/AWswbQsLQajsaMsvVQmcSyz3nPc?table=tble5aWe5aO4P90D) |
@@ -28,7 +29,7 @@
 |---|---|
 | 单选 | 训练状态（未开始／进行中／已完成）；建议掌握等级（L1基础／L2熟练／L3综合）；年级（初三）；期中考试价值（高／中／低）；广州中考价值（高／中／低）；学科（数学／物理／化学／道法／历史）；当前掌握程度（未掌握／部分掌握／已掌握） |
 | 日期 | 最近复测日期 |
-| 文本 | 验收标准；范围版本；考试范围确认依据；范围状态；掌握状态变更历史；二级知识点；预测分值区间与依据；覆盖状态；当前短板与常见错误；章节；核对编号；教材版本；一级知识点；学习状态；具体考点 |
+| 文本 | 验收标准；范围版本；考试范围确认依据；范围状态；掌握状态变更历史；二级知识点；预测分值区间与依据；覆盖状态；当前短板与常见错误；章节；核对编号；教材版本；一级知识点；学习状态；具体考点；必测动作（JSON 数组：action_id/name/criterion/difficulty/source）；必测动作ID（逗号分隔） |
 | 关联 | 前置知识点 → 知识点库；后续关联知识点 → 知识点库 |
 | 自动编号 | 知识点ID（ZSD-000000） |
 | 数字 | 预计中考分值 |
@@ -69,6 +70,17 @@
 | 文本 | 训练目标；筛选条件；检索批次ID；检索限制；每题评估与淘汰原因；检索平台；候选题链接与待核实资料；原始提示词；提示词版本 |
 | 数字 | 结果数量 |
 | 日期 | 日期 |
+
+### 选题候选
+
+显示主字段为「候选ID」。候选唯一落点，不写检索记录正文，也不进题目库。
+
+| 类型 | 字段及约束 |
+|---|---|
+| 关联 | 关联训练任务 → 训练任务库；关联知识点 → 知识点库 |
+| 文本 | 候选ID；题目ID/题号；题干摘要；来源URL；命中的必测动作（action_id 逗号分隔）；checks-detail；降级标记；复核人；所属批次；备注 |
+| 单选 | 来源站（21cnjy／出卷网／菁优网）；目标层级（L1／L2／L3／L4）；check-必测动作／check-难度档／check-配图／check-答案可验算／check-去重键／check-科目配比（各 pass／fail／unknown）；状态（待复核／已放行／已采用／已弃用） |
+| 日期 | 复核时间 |
 
 ### 作答记录库
 

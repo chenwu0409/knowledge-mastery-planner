@@ -297,6 +297,13 @@
                         },
                         "minItems": 1
                       },
+                      "image_requirement": {
+                        "enum": [
+                          "required",
+                          "illustrative",
+                          "none"
+                        ]
+                      },
                       "exclude_question_ids": {
                         "type": "array",
                         "items": {
@@ -503,6 +510,7 @@
         "status": {
           "enum": [
             "needs_research",
+            "needs_evidence",
             "scope_hold",
             "approved_for_pack"
           ]
@@ -630,6 +638,59 @@
         "legacy_no_checks": {
           "type": "boolean"
         },
+        "evidence_gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "detail"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "题面截断",
+                  "图不可读",
+                  "平台无答案",
+                  "答案墙",
+                  "题号对不上"
+                ]
+              },
+              "detail": {
+                "type": "string",
+                "minLength": 1
+              },
+              "question_id": {
+                "type": "string",
+                "pattern": "^TM-[0-9]+$"
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "dedupe_exception": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "added_actions"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "added_actions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            }
+          }
+        },
         "checks": {
           "type": "array",
           "items": {
@@ -665,8 +726,57 @@
               "question_id": {
                 "type": "string",
                 "pattern": "^TM-[0-9]+$"
+              },
+              "scope": {
+                "enum": [
+                  "question",
+                  "subquestion"
+                ]
+              },
+              "merged_subquestions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 2
+              },
+              "subquestion_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              },
+              "answer_source": {
+                "enum": [
+                  "platform_visible",
+                  "login_required",
+                  "no_answer",
+                  "independent_only"
+                ]
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "scope": {
+                      "const": "question"
+                    }
+                  },
+                  "required": [
+                    "scope"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "merged_subquestions"
+                  ]
+                }
+              }
+            ]
           },
           "minItems": 6
         },
@@ -685,16 +795,67 @@
             },
             "option": {
               "enum": [
-                "放宽难度档",
-                "换同知识点邻近题",
+                "换情境不换知识点",
+                "换源补题面",
+                "重定目标层级",
                 "证据不足人工介入"
               ]
             },
             "reason": {
               "type": "string",
               "minLength": 1
+            },
+            "level_change": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from",
+                "to",
+                "reason"
+              ],
+              "properties": {
+                "from": {
+                  "enum": [
+                    "L1",
+                    "L2",
+                    "L3",
+                    "L4"
+                  ]
+                },
+                "to": {
+                  "enum": [
+                    "L1",
+                    "L2",
+                    "L3",
+                    "L4"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "option": {
+                    "const": "重定目标层级"
+                  }
+                },
+                "required": [
+                  "option"
+                ]
+              },
+              "then": {
+                "required": [
+                  "level_change"
+                ]
+              }
+            }
+          ]
         },
         "history": {
           "type": "array",
@@ -703,7 +864,26 @@
           },
           "minItems": 0
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "needs_evidence"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "evidence_gaps"
+            ]
+          }
+        }
+      ]
     }
   }
 }
